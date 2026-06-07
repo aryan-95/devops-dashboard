@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DevOps Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --surface: #111318;
+      --surface2: #1a1d24;
+      --border: #252830;
+      --accent: #00d4aa;
+      --accent2: #f59e0b;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --blue: #3b82f6;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-display: 'Syne', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-display);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed; top: 0; left: 0;
+      width: 220px; height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      z-index: 100;
+      padding: 0;
+    }
+
+    .logo {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-title {
+      font-size: 16px; font-weight: 800; color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+    .logo-sub {
+      font-size: 11px; color: var(--muted);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    .nav { padding: 16px 0; flex: 1; }
+    .nav-section-label {
+      font-size: 10px; font-weight: 600; color: var(--muted);
+      letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 12px 20px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px; cursor: pointer;
+      font-size: 13px; font-weight: 600; color: var(--muted);
+      transition: all 0.15s; border-left: 2px solid transparent;
+      user-select: none;
+    }
+    .nav-item:hover { color: var(--text); background: var(--surface2); }
+    .nav-item.active {
+      color: var(--accent); background: rgba(0,212,170,0.07);
+      border-left-color: var(--accent);
+    }
+    .nav-item .icon { font-size: 15px; }
+
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      margin-left: auto; background: var(--muted);
+      transition: background 0.3s;
+    }
+    .status-dot.ok { background: var(--success); }
+    .status-dot.err { background: var(--danger); }
+
+    /* MAIN CONTENT */
+    .main { margin-left: 220px; min-height: 100vh; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(10,12,16,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar-title { font-size: 18px; font-weight: 800; }
+    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+    .btn {
+      padding: 7px 16px; border-radius: 6px; font-size: 12px;
+      font-weight: 600; cursor: pointer; border: none; outline: none;
+      font-family: var(--font-display); transition: all 0.15s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover { background: #00f0c3; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-ghost {
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-warning { background: var(--warning); color: #000; }
+    .btn-warning:hover { background: #d97706; }
+    .btn-sm { padding: 4px 10px; font-size: 11px; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* PAGE */
+    .page { display: none; padding: 28px; }
+    .page.active { display: block; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* CARDS */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+    /* GRID */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+    /* STAT CARDS */
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px 24px;
+    }
+    .stat-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    .stat-value { font-size: 32px; font-weight: 800; margin-top: 4px; font-family: var(--font-mono); }
+    .stat-sub { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: var(--font-mono); }
+    .stat-card.green { border-color: rgba(34,197,94,0.2); }
+    .stat-card.green .stat-value { color: var(--success); }
+    .stat-card.yellow { border-color: rgba(245,158,11,0.2); }
+    .stat-card.yellow .stat-value { color: var(--warning); }
+    .stat-card.blue { border-color: rgba(59,130,246,0.2); }
+    .stat-card.blue .stat-value { color: var(--blue); }
+    .stat-card.teal { border-color: rgba(0,212,170,0.2); }
+    .stat-card.teal .stat-value { color: var(--accent); }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left; padding: 8px 12px;
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 12px; border-bottom: 1px solid rgba(37,40,48,0.6);
+      font-family: var(--font-mono); font-size: 12px;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* BADGES */
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .badge-success { background: rgba(34,197,94,0.15); color: var(--success); }
+    .badge-danger { background: rgba(239,68,68,0.15); color: var(--danger); }
+    .badge-warning { background: rgba(245,158,11,0.15); color: var(--warning); }
+    .badge-blue { background: rgba(59,130,246,0.15); color: var(--blue); }
+    .badge-muted { background: var(--surface2); color: var(--muted); }
+
+    /* TERMINAL / LOGS */
+    .terminal {
+      background: #060810; border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px;
+      font-family: var(--font-mono); font-size: 12px;
+      line-height: 1.7; color: #a8ff78;
+      max-height: 400px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .terminal::-webkit-scrollbar { width: 4px; }
+    .terminal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* FORM ELEMENTS */
+    .form-group { margin-bottom: 14px; }
+    .form-label { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.08em; }
+    .form-input, .form-select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 9px 12px;
+      color: var(--text); font-size: 13px;
+      font-family: var(--font-mono); outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus, .form-select:focus { border-color: var(--accent); }
+    .form-select option { background: var(--bg); }
+
+    /* MODAL */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      z-index: 200; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px; width: 480px; max-width: 95vw;
+      max-height: 85vh; overflow-y: auto;
+    }
+    .modal-title { font-size: 16px; font-weight: 800; margin-bottom: 20px; }
+
+    /* TOAST */
+    .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+    .toast {
+      padding: 12px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+      animation: slideIn 0.2s ease;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      border: 1px solid transparent;
+      font-family: var(--font-mono);
+      min-width: 280px;
+    }
+    .toast.success { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.3); color: var(--success); }
+    .toast.error { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); color: var(--danger); }
+    .toast.info { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.3); color: var(--blue); }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* ACTIONS ROW */
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* SECTION GAP */
+    .section-gap { margin-top: 20px; }
+
+    /* LOADING */
+    .loading {
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px; color: var(--muted); font-family: var(--font-mono);
+      font-size: 12px; gap: 10px;
+    }
+    .spinner {
+      width: 16px; height: 16px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* EMPTY STATE */
+    .empty {
+      text-align: center; padding: 48px; color: var(--muted);
+      font-family: var(--font-mono); font-size: 12px;
+    }
+
+    /* TABS */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .tab {
+      padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+      color: var(--muted); border-bottom: 2px solid transparent;
+      transition: all 0.15s; margin-bottom: -1px;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab:hover:not(.active) { color: var(--text); }
+
+    /* OVERVIEW DOTS */
+    .pipeline-row {
+      display: flex; align-items: center; padding: 10px 0;
+      border-bottom: 1px solid rgba(37,40,48,0.5); gap: 12px;
+    }
+    .pipeline-row:last-child { border-bottom: none; }
+    .pipeline-name { flex: 1; font-size: 13px; font-weight: 600; }
+    .pipeline-meta { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+    @media (max-width: 900px) {
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .sidebar { transform: translateX(-220px); }
+      .main { margin-left: 0; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-title">⚙ DEVOPS HQ</div>
+    <div class="logo-sub">v1.0.0 · dashboard</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section-label">Overview</div>
+    <div class="nav-item active" onclick="navigate('overview')">
+      <span class="icon">📊</span> Overview
+    </div>
+
+    <div class="nav-section-label">Jenkins</div>
+    <div class="nav-item" onclick="navigate('jenkins-jobs')">
+      <span class="icon">🔨</span> Jobs
+      <span class="status-dot" id="jenkins-dot"></span>
+    </div>
+    <div class="nav-item" onclick="navigate('jenkins-builds')">
+      <span class="icon">🔄</span> Builds
+    </div>
+    <div class="nav-item" onclick="navigate('jenkins-queue')">
+      <span class="icon">📋</span> Queue
+    </div>
+
+    <div class="nav-section-label">Docker</div>
+    <div class="nav-item" onclick="navigate('docker-containers')">
+      <span class="icon">📦</span> Containers
+      <span class="status-dot" id="docker-dot"></span>
+    </div>
+    <div class="nav-item" onclick="navigate('docker-images')">
+      <span class="icon">🖼</span> Images
+    </div>
+    <div class="nav-item" onclick="navigate('docker-run')">
+      <span class="icon">▶</span> Run Container
+    </div>
+    <div class="nav-item" onclick="navigate('docker-system')">
+      <span class="icon">🛠</span> System
+    </div>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Overview</div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" onclick="refreshCurrent()">↺ Refresh</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('quickBuildModal')">⚡ Quick Build</button>
+    </div>
+  </div>
+
+  <!-- ── OVERVIEW PAGE ── -->
+  <div class="page active" id="page-overview">
+    <div class="grid-4" id="overview-stats">
+      <div class="stat-card teal"><div class="stat-label">Jenkins Jobs</div><div class="stat-value" id="stat-jobs">–</div><div class="stat-sub">total jobs</div></div>
+      <div class="stat-card green"><div class="stat-label">Running</div><div class="stat-value" id="stat-running">–</div><div class="stat-sub">containers</div></div>
+      <div class="stat-card blue"><div class="stat-label">Images</div><div class="stat-value" id="stat-images">–</div><div class="stat-sub">docker images</div></div>
+      <div class="stat-card yellow"><div class="stat-label">Queue</div><div class="stat-value" id="stat-queue">–</div><div class="stat-sub">queued builds</div></div>
+    </div>
+
+    <div class="grid-2 section-gap">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">🔨 Recent Jenkins Jobs</span>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('jenkins-jobs')">View all →</button>
+        </div>
+        <div id="overview-jobs"><div class="loading"><div class="spinner"></div> Loading...</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">📦 Docker Containers</span>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('docker-containers')">View all →</button>
+        </div>
+        <div id="overview-containers"><div class="loading"><div class="spinner"></div> Loading...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── JENKINS JOBS PAGE ── -->
+  <div class="page" id="page-jenkins-jobs">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">All Jenkins Jobs</span>
+        <div class="actions">
+          <button class="btn btn-primary btn-sm" onclick="openModal('quickBuildModal')">⚡ Trigger Build</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadJenkinsJobs()">↺ Refresh</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Job Name</th><th>Status</th><th>Last Build</th><th>Result</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="jenkins-jobs-tbody">
+            <tr><td colspan="5"><div class="loading"><div class="spinner"></div> Loading jobs...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── JENKINS BUILDS PAGE ── -->
+  <div class="page" id="page-jenkins-builds">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Build Details</span>
+      </div>
+      <div class="form-group" style="max-width:400px">
+        <label class="form-label">Job Name</label>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="build-job-input" placeholder="Enter job name..."/>
+          <input class="form-input" id="build-num-input" placeholder="#" style="width:80px"/>
+          <button class="btn btn-primary" onclick="fetchBuildStatus()">Fetch</button>
+        </div>
+      </div>
+      <div id="build-status-result"></div>
+      <div id="build-console-wrap" class="section-gap" style="display:none">
+        <div class="card-header">
+          <span class="card-title">Console Output</span>
+          <button class="btn btn-ghost btn-sm" onclick="loadConsole()">Load Console</button>
+        </div>
+        <div class="terminal" id="build-console">Click "Load Console" to fetch output.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── JENKINS QUEUE PAGE ── -->
+  <div class="page" id="page-jenkins-queue">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Build Queue</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadJenkinsQueue()">↺ Refresh</button>
+      </div>
+      <div id="queue-content"><div class="loading"><div class="spinner"></div> Loading queue...</div></div>
+    </div>
+  </div>
+
+  <!-- ── DOCKER CONTAINERS PAGE ── -->
+  <div class="page" id="page-docker-containers">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">All Containers</span>
+        <div class="actions">
+          <button class="btn btn-primary btn-sm" onclick="navigate('docker-run')">▶ Run New</button>
+          <button class="btn btn-warning btn-sm" onclick="pruneContainers()">🧹 Prune Stopped</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadContainers()">↺ Refresh</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Image</th><th>Status</th><th>State</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="containers-tbody">
+            <tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading containers...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DOCKER IMAGES PAGE ── -->
+  <div class="page" id="page-docker-images">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Docker Images</span>
+        <div class="actions">
+          <button class="btn btn-primary btn-sm" onclick="openModal('pullImageModal')">⬇ Pull Image</button>
+          <button class="btn btn-warning btn-sm" onclick="pruneImages()">🧹 Prune Unused</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadImages()">↺ Refresh</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Tags</th><th>Size</th><th>Created</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="images-tbody">
+            <tr><td colspan="5"><div class="loading"><div class="spinner"></div> Loading images...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DOCKER RUN PAGE ── -->
+  <div class="page" id="page-docker-run">
+    <div class="card" style="max-width:600px">
+      <div class="card-header"><span class="card-title">Run New Container</span></div>
+      <div class="form-group">
+        <label class="form-label">Image Name *</label>
+        <input class="form-input" id="run-image" placeholder="e.g. nginx:latest"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Container Name</label>
+        <input class="form-input" id="run-name" placeholder="e.g. my-nginx"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Port Mappings (host:container, comma separated)</label>
+        <input class="form-input" id="run-ports" placeholder="e.g. 8080:80, 443:443"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Environment Variables (KEY=VALUE, one per line)</label>
+        <textarea class="form-input" id="run-env" rows="3" placeholder="NODE_ENV=production&#10;PORT=3000"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Command Override (optional)</label>
+        <input class="form-input" id="run-cmd" placeholder="e.g. node server.js"/>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="runContainer()">▶ Run Container</button>
+      <div id="run-result" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <!-- ── DOCKER SYSTEM PAGE ── -->
+  <div class="page" id="page-docker-system">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Docker System Info</span></div>
+        <div id="docker-system-info"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Docker Version</span></div>
+        <div id="docker-version-info"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+    <div class="card section-gap">
+      <div class="card-header"><span class="card-title">Maintenance Actions</span></div>
+      <div class="actions">
+        <button class="btn btn-warning" onclick="pruneContainers()">🧹 Prune Stopped Containers</button>
+        <button class="btn btn-warning" onclick="pruneImages()">🧹 Prune Unused Images</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ── MODALS ── -->
+
+<!-- Quick Build Modal -->
+<div class="modal-overlay" id="quickBuildModal">
+  <div class="modal">
+    <div class="modal-title">⚡ Quick Build Trigger</div>
+    <div class="form-group">
+      <label class="form-label">Job Name *</label>
+      <input class="form-input" id="qb-job" placeholder="Enter job name..."/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Parameters (KEY=VALUE, one per line, optional)</label>
+      <textarea class="form-input" id="qb-params" rows="3" placeholder="BRANCH=main&#10;ENV=production"></textarea>
+    </div>
+    <div class="actions" style="margin-top:8px">
+      <button class="btn btn-primary" onclick="triggerBuild()">🚀 Trigger</button>
+      <button class="btn btn-ghost" onclick="closeModal('quickBuildModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pull Image Modal -->
+<div class="modal-overlay" id="pullImageModal">
+  <div class="modal">
+    <div class="modal-title">⬇ Pull Docker Image</div>
+    <div class="form-group">
+      <label class="form-label">Image Name *</label>
+      <input class="form-input" id="pull-image-name" placeholder="e.g. ubuntu:22.04 or nginx:latest"/>
+    </div>
+    <div class="actions" style="margin-top:8px">
+      <button class="btn btn-primary" onclick="pullImage()">⬇ Pull</button>
+      <button class="btn btn-ghost" onclick="closeModal('pullImageModal')">Cancel</button>
+    </div>
+    <div id="pull-result" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<!-- Logs Modal -->
+<div class="modal-overlay" id="logsModal">
+  <div class="modal" style="width:700px;max-width:95vw">
+    <div class="modal-title">📋 Container Logs — <span id="logs-container-name"></span></div>
+    <div class="terminal" id="logs-content">Loading...</div>
+    <div style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModal('logsModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+  // ── CONFIG ──
+  const API = '';  // relative to same origin
+
+  // ── NAVIGATION ──
+  let currentPage = 'overview';
+
+  function navigate(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`page-${page}`).classList.add('active');
+    document.querySelector(`[onclick="navigate('${page}')"]`).classList.add('active');
+    document.getElementById('page-title').textContent = pageTitles[page] || page;
+    currentPage = page;
+    loadPage(page);
+  }
+
+  const pageTitles = {
+    'overview': 'Overview',
+    'jenkins-jobs': 'Jenkins Jobs',
+    'jenkins-builds': 'Build Details',
+    'jenkins-queue': 'Build Queue',
+    'docker-containers': 'Docker Containers',
+    'docker-images': 'Docker Images',
+    'docker-run': 'Run Container',
+    'docker-system': 'Docker System',
+  };
+
+  function loadPage(page) {
+    switch(page) {
+      case 'overview': loadOverview(); break;
+      case 'jenkins-jobs': loadJenkinsJobs(); break;
+      case 'jenkins-queue': loadJenkinsQueue(); break;
+      case 'docker-containers': loadContainers(); break;
+      case 'docker-images': loadImages(); break;
+      case 'docker-system': loadDockerSystem(); break;
+    }
+  }
+
+  function refreshCurrent() { loadPage(currentPage); }
+
+  // ── API HELPERS ──
+  async function api(method, path, body) {
+    try {
+      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(API + path, opts);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    } catch(e) {
+      throw e;
+    }
+  }
+
+  // ── TOAST ──
+  function toast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `<span>${type==='success'?'✓':type==='error'?'✗':'ℹ'}</span> ${msg}`;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  // ── MODAL ──
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+  });
+
+  // ── STATUS HELPERS ──
+  function colorBadge(status) {
+    if (!status) return '<span class="badge badge-muted">–</span>';
+    const s = status.toUpperCase();
+    if (s === 'SUCCESS' || s === 'RUNNING' || s === 'BLUE') return `<span class="badge badge-success">${status}</span>`;
+    if (s === 'FAILURE' || s === 'RED' || s === 'FAILED') return `<span class="badge badge-danger">${status}</span>`;
+    if (s === 'ABORTED' || s === 'GREY' || s === 'DISABLED') return `<span class="badge badge-muted">${status}</span>`;
+    if (s === 'UNSTABLE' || s === 'YELLOW') return `<span class="badge badge-warning">${status}</span>`;
+    if (s.includes('BUILDING') || s === 'BLUE_ANIME') return `<span class="badge badge-blue">BUILDING</span>`;
+    return `<span class="badge badge-muted">${status}</span>`;
+  }
+
+  function containerBadge(state) {
+    if (state === 'running') return '<span class="badge badge-success">running</span>';
+    if (state === 'exited') return '<span class="badge badge-danger">exited</span>';
+    if (state === 'paused') return '<span class="badge badge-warning">paused</span>';
+    return `<span class="badge badge-muted">${state}</span>`;
+  }
+
+  function timeSince(ts) {
+    if (!ts) return '–';
+    const d = new Date(ts * 1000);
+    const diff = Date.now() - d;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs/24)}d ago`;
+  }
+
+  // ── OVERVIEW ──
+  async function loadOverview() {
+    try {
+      const [jobs, containers, images, queue] = await Promise.allSettled([
+        api('GET', '/api/jenkins/jobs'),
+        api('GET', '/api/docker/containers'),
+        api('GET', '/api/docker/images'),
+        api('GET', '/api/jenkins/queue'),
+      ]);
+
+      if (jobs.value) {
+        document.getElementById('stat-jobs').textContent = jobs.value.length;
+        document.getElementById('jenkins-dot').className = 'status-dot ok';
+        const html = jobs.value.slice(0, 6).map(j => `
+          <div class="pipeline-row">
+            <div>
+              <div class="pipeline-name">${j.name}</div>
+              <div class="pipeline-meta">${j.lastBuild ? timeSince(j.lastBuild.timestamp/1000) : 'no builds'}</div>
+            </div>
+            ${colorBadge(j.color)}
+            <button class="btn btn-primary btn-sm" onclick="quickTrigger('${j.name}')">▶</button>
+          </div>`).join('');
+        document.getElementById('overview-jobs').innerHTML = html || '<div class="empty">No jobs found</div>';
+      } else {
+        document.getElementById('jenkins-dot').className = 'status-dot err';
+        document.getElementById('overview-jobs').innerHTML = '<div class="empty">⚠ Could not reach Jenkins</div>';
+      }
+
+      if (containers.value) {
+        const running = containers.value.filter(c => c.state === 'running').length;
+        document.getElementById('stat-running').textContent = running;
+        document.getElementById('docker-dot').className = 'status-dot ok';
+        const html = containers.value.slice(0, 6).map(c => `
+          <div class="pipeline-row">
+            <div>
+              <div class="pipeline-name">${c.name}</div>
+              <div class="pipeline-meta">${c.image}</div>
+            </div>
+            ${containerBadge(c.state)}
+            ${c.state === 'running'
+              ? `<button class="btn btn-danger btn-sm" onclick="stopContainer('${c.fullId}')">■ Stop</button>`
+              : `<button class="btn btn-primary btn-sm" onclick="startContainer('${c.fullId}')">▶ Start</button>`}
+          </div>`).join('');
+        document.getElementById('overview-containers').innerHTML = html || '<div class="empty">No containers found</div>';
+      } else {
+        document.getElementById('docker-dot').className = 'status-dot err';
+        document.getElementById('overview-containers').innerHTML = '<div class="empty">⚠ Could not reach Docker</div>';
+      }
+
+      if (images.value) document.getElementById('stat-images').textContent = images.value.length;
+      if (queue.value) document.getElementById('stat-queue').textContent = queue.value.length;
+
+    } catch(e) {
+      toast('Failed to load overview: ' + e.message, 'error');
+    }
+  }
+
+  // ── JENKINS JOBS ──
+  async function loadJenkinsJobs() {
+    const tbody = document.getElementById('jenkins-jobs-tbody');
+    tbody.innerHTML = '<tr><td colspan="5"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>';
+    try {
+      const jobs = await api('GET', '/api/jenkins/jobs');
+      if (!jobs.length) {
+        tbody.innerHTML = '<tr><td colspan="5"><div class="empty">No jobs found. Check Jenkins connection in .env</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = jobs.map(j => `
+        <tr>
+          <td><strong>${j.name}</strong></td>
+          <td>${colorBadge(j.color)}</td>
+          <td>${j.lastBuild ? `#${j.lastBuild.number} · ${timeSince(j.lastBuild.timestamp/1000)}` : '–'}</td>
+          <td>${j.lastBuild ? colorBadge(j.lastBuild.result) : '–'}</td>
+          <td class="actions">
+            <button class="btn btn-primary btn-sm" onclick="quickTrigger('${j.name}')">▶ Build</button>
+            <button class="btn btn-ghost btn-sm" onclick="viewJobBuilds('${j.name}')">Builds</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteJob('${j.name}')">🗑</button>
+          </td>
+        </tr>`).join('');
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty">⚠ ${e.message}</div></td></tr>`;
+    }
+  }
+
+  async function quickTrigger(name) {
+    try {
+      await api('POST', `/api/jenkins/jobs/${encodeURIComponent(name)}/build`, {});
+      toast(`Build triggered: ${name}`, 'success');
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function deleteJob(name) {
+    if (!confirm(`Delete job "${name}"? This cannot be undone.`)) return;
+    try {
+      await api('DELETE', `/api/jenkins/jobs/${encodeURIComponent(name)}`);
+      toast(`Job "${name}" deleted`, 'success');
+      loadJenkinsJobs();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  function viewJobBuilds(name) {
+    document.getElementById('build-job-input').value = name;
+    document.getElementById('build-num-input').value = 'lastBuild';
+    navigate('jenkins-builds');
+    fetchBuildStatus();
+  }
+
+  // ── TRIGGER BUILD ──
+  async function triggerBuild() {
+    const job = document.getElementById('qb-job').value.trim();
+    if (!job) { toast('Enter a job name', 'error'); return; }
+    const rawParams = document.getElementById('qb-params').value.trim();
+    const params = {};
+    if (rawParams) {
+      rawParams.split('\n').forEach(line => {
+        const [k, ...v] = line.split('=');
+        if (k) params[k.trim()] = v.join('=').trim();
+      });
+    }
+    try {
+      const res = await api('POST', `/api/jenkins/jobs/${encodeURIComponent(job)}/build`, { params });
+      toast(res.message, 'success');
+      closeModal('quickBuildModal');
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ── BUILD STATUS ──
+  async function fetchBuildStatus() {
+    const job = document.getElementById('build-job-input').value.trim();
+    const num = document.getElementById('build-num-input').value.trim() || 'lastBuild';
+    if (!job) { toast('Enter a job name', 'error'); return; }
+    const el = document.getElementById('build-status-result');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div> Fetching...</div>';
+    try {
+      const b = await api('GET', `/api/jenkins/jobs/${encodeURIComponent(job)}/builds/${num}`);
+      el.innerHTML = `
+        <div class="card" style="margin-top:14px">
+          <table><tbody>
+            <tr><td><strong>Job</strong></td><td>${b.fullDisplayName || job}</td></tr>
+            <tr><td><strong>Build #</strong></td><td>${b.number}</td></tr>
+            <tr><td><strong>Result</strong></td><td>${colorBadge(b.result)}</td></tr>
+            <tr><td><strong>Duration</strong></td><td>${b.duration ? (b.duration/1000).toFixed(1)+'s' : '–'}</td></tr>
+            <tr><td><strong>Timestamp</strong></td><td>${b.timestamp ? new Date(b.timestamp).toLocaleString() : '–'}</td></tr>
+            <tr><td><strong>Building</strong></td><td>${b.building ? '<span class="badge badge-blue">YES</span>' : 'No'}</td></tr>
+          </tbody></table>
+          ${b.building ? `<div style="margin-top:12px"><button class="btn btn-danger btn-sm" onclick="stopBuild('${job}', ${b.number})">■ Stop Build</button></div>` : ''}
+        </div>`;
+      document.getElementById('build-console-wrap').style.display = 'block';
+      window._currentBuildJob = job;
+      window._currentBuildNum = b.number;
+    } catch(e) {
+      el.innerHTML = `<div class="empty">⚠ ${e.message}</div>`;
+    }
+  }
+
+  async function loadConsole() {
+    const job = window._currentBuildJob;
+    const num = window._currentBuildNum;
+    if (!job) return;
+    const el = document.getElementById('build-console');
+    el.textContent = 'Loading console output...';
+    try {
+      const res = await fetch(`/api/jenkins/jobs/${encodeURIComponent(job)}/builds/${num}/console`);
+      el.textContent = await res.text();
+      el.scrollTop = el.scrollHeight;
+    } catch(e) { el.textContent = 'Error: ' + e.message; }
+  }
+
+  async function stopBuild(job, num) {
+    try {
+      await api('POST', `/api/jenkins/jobs/${encodeURIComponent(job)}/builds/${num}/stop`);
+      toast(`Build #${num} stopped`, 'success');
+      fetchBuildStatus();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ── QUEUE ──
+  async function loadJenkinsQueue() {
+    const el = document.getElementById('queue-content');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const items = await api('GET', '/api/jenkins/queue');
+      if (!items.length) {
+        el.innerHTML = '<div class="empty">Queue is empty</div>';
+        return;
+      }
+      el.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>Job</th><th>Why</th><th>Queued Since</th></tr></thead>
+        <tbody>${items.map(i => `
+          <tr>
+            <td>${i.task?.name || '–'}</td>
+            <td>${i.why || '–'}</td>
+            <td>${i.inQueueSince ? timeSince(i.inQueueSince/1000) : '–'}</td>
+          </tr>`).join('')}</tbody>
+      </table></div>`;
+    } catch(e) { el.innerHTML = `<div class="empty">⚠ ${e.message}</div>`; }
+  }
+
+  // ── DOCKER CONTAINERS ──
+  async function loadContainers() {
+    const tbody = document.getElementById('containers-tbody');
+    tbody.innerHTML = '<tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>';
+    try {
+      const list = await api('GET', '/api/docker/containers');
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="6"><div class="empty">No containers found</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(c => `
+        <tr>
+          <td>${c.id}</td>
+          <td><strong>${c.name}</strong></td>
+          <td>${c.image}</td>
+          <td>${c.status}</td>
+          <td>${containerBadge(c.state)}</td>
+          <td class="actions">
+            ${c.state === 'running'
+              ? `<button class="btn btn-warning btn-sm" onclick="stopContainer('${c.fullId}')">■ Stop</button>
+                 <button class="btn btn-ghost btn-sm" onclick="restartContainer('${c.fullId}')">↺</button>`
+              : `<button class="btn btn-primary btn-sm" onclick="startContainer('${c.fullId}')">▶ Start</button>`}
+            <button class="btn btn-ghost btn-sm" onclick="showLogs('${c.fullId}', '${c.name}')">📋 Logs</button>
+            <button class="btn btn-danger btn-sm" onclick="removeContainer('${c.fullId}')">🗑</button>
+          </td>
+        </tr>`).join('');
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty">⚠ ${e.message}</div></td></tr>`;
+    }
+  }
+
+  async function startContainer(id) {
+    try {
+      await api('POST', `/api/docker/containers/${id}/start`);
+      toast('Container started', 'success'); loadContainers();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function stopContainer(id) {
+    try {
+      await api('POST', `/api/docker/containers/${id}/stop`);
+      toast('Container stopped', 'success'); loadContainers(); loadOverview();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function restartContainer(id) {
+    try {
+      await api('POST', `/api/docker/containers/${id}/restart`);
+      toast('Container restarted', 'success'); loadContainers();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function removeContainer(id) {
+    if (!confirm('Remove this container?')) return;
+    try {
+      await api('DELETE', `/api/docker/containers/${id}`);
+      toast('Container removed', 'success'); loadContainers();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function showLogs(id, name) {
+    document.getElementById('logs-container-name').textContent = name;
+    document.getElementById('logs-content').textContent = 'Loading logs...';
+    openModal('logsModal');
+    try {
+      const res = await fetch(`/api/docker/containers/${id}/logs?tail=200`);
+      document.getElementById('logs-content').textContent = await res.text() || '(empty logs)';
+    } catch(e) {
+      document.getElementById('logs-content').textContent = 'Error: ' + e.message;
+    }
+  }
+
+  async function pruneContainers() {
+    if (!confirm('Prune all stopped containers?')) return;
+    try {
+      const res = await api('POST', '/api/docker/prune/containers');
+      toast(res.message, 'success'); loadContainers();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ── DOCKER IMAGES ──
+  async function loadImages() {
+    const tbody = document.getElementById('images-tbody');
+    tbody.innerHTML = '<tr><td colspan="5"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>';
+    try {
+      const list = await api('GET', '/api/docker/images');
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="5"><div class="empty">No images found</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(img => `
+        <tr>
+          <td>${img.id}</td>
+          <td>${img.tags.join(', ')}</td>
+          <td>${img.size}</td>
+          <td>${timeSince(img.created)}</td>
+          <td class="actions">
+            <button class="btn btn-primary btn-sm" onclick="runFromImage('${img.tags[0]}')">▶ Run</button>
+            <button class="btn btn-danger btn-sm" onclick="removeImage('${img.fullId}')">🗑</button>
+          </td>
+        </tr>`).join('');
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty">⚠ ${e.message}</div></td></tr>`;
+    }
+  }
+
+  function runFromImage(tag) {
+    document.getElementById('run-image').value = tag;
+    navigate('docker-run');
+  }
+
+  async function removeImage(id) {
+    if (!confirm('Remove this image?')) return;
+    try {
+      await api('DELETE', `/api/docker/images/${encodeURIComponent(id)}`);
+      toast('Image removed', 'success'); loadImages();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  async function pullImage() {
+    const name = document.getElementById('pull-image-name').value.trim();
+    if (!name) { toast('Enter image name', 'error'); return; }
+    const el = document.getElementById('pull-result');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div> Pulling image (this may take a while)...</div>';
+    try {
+      const res = await api('POST', '/api/docker/images/pull', { image: name });
+      el.innerHTML = `<div class="toast success" style="margin:0">${res.message}</div>`;
+      loadImages();
+    } catch(e) {
+      el.innerHTML = `<div class="toast error" style="margin:0">${e.message}</div>`;
+    }
+  }
+
+  async function pruneImages() {
+    if (!confirm('Prune unused images?')) return;
+    try {
+      const res = await api('POST', '/api/docker/prune/images');
+      toast(res.message, 'success'); loadImages();
+    } catch(e) { toast(e.message, 'error'); }
+  }
+
+  // ── RUN CONTAINER ──
+  async function runContainer() {
+    const image = document.getElementById('run-image').value.trim();
+    if (!image) { toast('Image name is required', 'error'); return; }
+    const name = document.getElementById('run-name').value.trim();
+    const portsRaw = document.getElementById('run-ports').value.trim();
+    const envRaw = document.getElementById('run-env').value.trim();
+    const cmdRaw = document.getElementById('run-cmd').value.trim();
+
+    const ports = portsRaw ? portsRaw.split(',').map(p => p.trim()).filter(Boolean) : [];
+    const env = envRaw ? envRaw.split('\n').map(e => e.trim()).filter(Boolean) : [];
+    const cmd = cmdRaw ? cmdRaw.split(' ') : undefined;
+
+    const el = document.getElementById('run-result');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div> Starting container...</div>';
+    try {
+      const res = await api('POST', '/api/docker/containers/run', { image, name: name || undefined, ports, env, cmd });
+      el.innerHTML = `<div class="toast success" style="margin:0">✓ ${res.message} (ID: ${res.id})</div>`;
+      toast(res.message, 'success');
+    } catch(e) {
+      el.innerHTML = `<div class="toast error" style="margin:0">✗ ${e.message}</div>`;
+    }
+  }
+
+  // ── DOCKER SYSTEM ──
+  async function loadDockerSystem() {
+    try {
+      const [info, ver] = await Promise.all([
+        api('GET', '/api/docker/info'),
+        api('GET', '/api/docker/version'),
+      ]);
+      document.getElementById('docker-system-info').innerHTML = `
+        <table><tbody>
+          <tr><td><strong>Containers</strong></td><td>${info.Containers}</td></tr>
+          <tr><td><strong>Running</strong></td><td>${info.ContainersRunning}</td></tr>
+          <tr><td><strong>Paused</strong></td><td>${info.ContainersPaused}</td></tr>
+          <tr><td><strong>Stopped</strong></td><td>${info.ContainersStopped}</td></tr>
+          <tr><td><strong>Images</strong></td><td>${info.Images}</td></tr>
+          <tr><td><strong>OS</strong></td><td>${info.OperatingSystem}</td></tr>
+          <tr><td><strong>Architecture</strong></td><td>${info.Architecture}</td></tr>
+          <tr><td><strong>Memory</strong></td><td>${(info.MemTotal/1024/1024/1024).toFixed(1)} GB</td></tr>
+          <tr><td><strong>CPUs</strong></td><td>${info.NCPU}</td></tr>
+        </tbody></table>`;
+      document.getElementById('docker-version-info').innerHTML = `
+        <table><tbody>
+          <tr><td><strong>Version</strong></td><td>${ver.Version}</td></tr>
+          <tr><td><strong>API Version</strong></td><td>${ver.ApiVersion}</td></tr>
+          <tr><td><strong>Go Version</strong></td><td>${ver.GoVersion}</td></tr>
+          <tr><td><strong>OS</strong></td><td>${ver.Os}</td></tr>
+          <tr><td><strong>Arch</strong></td><td>${ver.Arch}</td></tr>
+          <tr><td><strong>Build Time</strong></td><td>${ver.BuildTime}</td></tr>
+        </tbody></table>`;
+    } catch(e) {
+      document.getElementById('docker-system-info').innerHTML = `<div class="empty">⚠ ${e.message}</div>`;
+    }
+  }
+
+  // ── INIT ──
+  loadOverview();
+</script>
+</body>
+</html>
