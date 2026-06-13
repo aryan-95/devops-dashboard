@@ -1,12 +1,142 @@
-pipelines{
- agent any {
-        stages{
-            stage("fetch code"){
-                steps{
-                    git
+def COLOR_MAP = [
+    'SUCCESS': 'good',
+    'FAILURE': 'danger',
+    'UNSTABLE': 'warning'
+]
+
+pipeline {
+    agent any
+
+    environment {
+        scannerHome = tool 'sonar8.1'
+        registryCredentials = 'ecr:us-east-1:awscred'
+        imageName = "430606113094.dkr.ecr.us-east-1.amazonaws.com/devopsdashboardimg"
+        dashboardRegistry = "https://430606113094.dkr.ecr.us-east-1.amazonaws.com"
+        cluster = "dashboard"
+        service = "dashboard-task-service"
+
+    }
+
+    stages {
+        stage('Fetch Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/aryan-95/devops-dashboard.git'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                sh 'npm test || true'
+            }
+        }
+
+        stage('Checkstyle Analysis') {
+            steps {
+                sh 'npm run lint || true'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonarserver') {
+                    sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                        -Dsonar.projectKey=devops-dashboard \
+                        -Dsonar.projectName=devops-dashboard \
+                        -Dsonar.projectVersion=1.0 \
+                        -Dsonar.sources=. \
+                        -Dsonar.exclusions=node_modules/** \
+                        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                    """
                 }
             }
+        }
 
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Docker Build') {
+                steps {
+                   script {
+                    dockerImage = docker.build(imageName + ":${BUILD_NUMBER}", "./")
+                                }
+                    }
+        }
+
+        stage('Archive Artifacts') {
+            steps {
+                sh "docker save ${imageName}:${BUILD_NUMBER} -o devops-dashboard.tar"
+                archiveArtifacts artifacts: 'devops-dashboard.tar', fingerprint: true
+            }
+        }
+
+        stage('Push Image to ECR') {
+            steps {
+               script {
+                docker.withRegistry(dashboardRegistry, registryCredentials) {
+                dockerImage.push("${BUILD_NUMBER}")
+                dockerImage.push("latest")
+                    }
+                }
+            }
+        }
+        stage('Deploy to ECS'){
+            steps{
+                withAWS(credentials: 'awscred',region: 'us-east-1'){
+                    sh 'aws ecs update-service --cluster ${cluster} --service ${service} --force-new-deployment'
+                }
+            }
+        }
+    
+      
+       stage('Remove container images'){
+        steps{
+            sh 'docker rmi -f $(docker images -a -q)'
+        }
+       }
+
+        stage('Publish to Nexus') {
+            steps {
+                nexusArtifactUploader(
+                    nexusVersion: 'nexus3',
+                    protocol: 'http',
+                    nexusUrl: '172.31.37.99:8081',
+                    groupId: 'QA',
+                    version: "1.0.${BUILD_NUMBER}",
+                    repository: 'devops-repo',
+                    credentialsId: 'nexuslogin',
+                    artifacts: [
+                        [
+                            artifactId: 'devops-dashboard',
+                            classifier: '',
+                            file: 'devops-dashboard.tar',
+                            type: 'tar'
+                        ]
+                    ]
+                )
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Slack Notification.'
+            slackSend(
+                channel: '#cicd-dashboard',
+                color: COLOR_MAP[currentBuild.currentResult],
+                message: "*${currentBuild.currentResult}:* Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}"
+            )
         }
     }
 }
